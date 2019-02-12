@@ -93,9 +93,9 @@ impl LxiDevice {
                             remove_newline(&mut text);
                             Ok((dev, text))
                         },
-                        Err(_) => Err(tio::Error::new(
+                        Err(ue) => Err(tio::Error::new(
                             tio::ErrorKind::InvalidData,
-                            ""
+                            String::from_utf8_lossy(&ue.as_bytes()),
                         )),
                     }
                 },
@@ -122,14 +122,14 @@ mod tests {
         let listener = TcpListener::bind(&SocketAddr::new(LOCALHOST, 0)).unwrap();
         let address = listener.local_addr().unwrap();
         let server = listener.incoming()
-        .map_err(|e| panic!(e))
+        .map_err(|e| panic!("{:?}", e))
         .take(1)
         .for_each(|sock| {
             let (reader, writer) = sock.split();
             tokio::spawn(
                 tio::copy(reader, writer)
                 .map(|_| ())
-                .map_err(|e| panic!(e))
+                .map_err(|e| panic!("{:?}", e))
             )
         });
 
@@ -145,7 +145,7 @@ mod tests {
         .map(|(_, text, buf)| {
             assert_eq!(text, &buf[..]);
         })
-        .map_err(|e| panic!(e));
+        .map_err(|e| panic!("{:?}", e));
 
         tokio::run(server.join(client).map(|_| ()));
     }
@@ -168,7 +168,7 @@ mod tests {
         .map(|(_, buf)| {
             assert_eq!(b"DummyEmulator\r\n", &buf[..]);
         })
-        .map_err(|e| panic!(e));
+        .map_err(|e| panic!("{:?}", e));
 
         tokio::run(server.join(client).map(|_| ()));
     }
@@ -180,16 +180,10 @@ mod tests {
         let server = device.run(1);
 
         let device = LxiDevice::connect(&address)
-        .and_then(|dev| {
-            dev.send(String::from("IDN?"))
-        })
-        .and_then(|(dev, _)| {
-            dev.receive(String::new())
-        })
-        .map(|(_, text)| {
-            assert_eq!("DummyEmulator", text);
-        })
-        .map_err(|e| panic!(e));
+        .and_then(|dev| { dev.send(String::from("IDN?")) })
+        .and_then(|(dev, _)| { dev.receive(String::new()) })
+        .map(|(_, text)| { assert_eq!("DummyEmulator", text); })
+        .map_err(|e| panic!("{:?}", e));
 
         tokio::runtime::current_thread::run(server.join(device).map(|_| ()));
     }
