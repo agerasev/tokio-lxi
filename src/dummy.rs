@@ -6,14 +6,14 @@ use tokio::net::{TcpListener};
 use tokio::{io as tio};
 
 
-pub struct DummyDevice {
+pub struct DummyEmulator {
     listener: TcpListener,
 }
 
-impl DummyDevice {
+impl DummyEmulator {
     pub fn new(addr: IpAddr) -> tio::Result<Self> {
         TcpListener::bind(&SocketAddr::new(addr, 0))
-        .map(|listener| DummyDevice { listener })
+        .map(|listener| DummyEmulator { listener })
     }
 
     pub fn address(&self) -> tio::Result<SocketAddr> {
@@ -29,14 +29,14 @@ impl DummyDevice {
             let reader = BufReader::new(reader);
             tokio::spawn(
                 tio::read_until(reader, b'\n', Vec::new())
-                .and_then(move |(reader, buf)| {
+                .and_then(move |(_reader, buf)| {
                     let response = if buf.starts_with(b"IDN?") {
-                        &b"DummyDevice\n"[..]
+                        &b"DummyEmulator\r\n"[..]
                     } else {
-                        &b"Error\n"[..]
+                        &b"Error\r\n"[..]
                     };
                     tio::write_all(writer, response)
-                    .map(|writer| {
+                    .map(|_writer| {
                         //(reader, writer)
                         ()
                     })

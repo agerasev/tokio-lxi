@@ -1,4 +1,4 @@
-# ringbuf
+# tokio-lxi
 
 [![Crates.io][crates_badge]][crates]
 [![Docs.rs][docs_badge]][docs]
@@ -20,8 +20,6 @@
 [appveyor]: https://ci.appveyor.com/project/nthend/tokio-lxi
 [codecov]: https://codecov.io/gh/nthend/tokio-lxi
 [license]: #license
-
-# tokio-lxi
 
 LXI protocol abstractions for Tokio.
 
