@@ -1,48 +1,40 @@
-use std::io::{BufReader};
-use std::net::{SocketAddr, IpAddr};
+use std::net::{IpAddr, SocketAddr};
 
+use tokio::io as tio;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::prelude::*;
-use tokio::net::{TcpListener};
-use tokio::{io as tio};
-
 
 pub struct DummyEmulator {
     listener: TcpListener,
 }
 
 impl DummyEmulator {
-    pub fn new(addr: IpAddr) -> tio::Result<Self> {
-        TcpListener::bind(&SocketAddr::new(addr, 0))
-        .map(|listener| DummyEmulator { listener })
+    pub async fn start(addr: IpAddr) -> Self {
+        let listener = TcpListener::bind(&SocketAddr::new(addr, 0)).await.unwrap();
+        DummyEmulator { listener }
     }
 
     pub fn address(&self) -> tio::Result<SocketAddr> {
         self.listener.local_addr()
     }
 
-    pub fn run(self, conns: u64) -> impl Future<Item=(), Error=()> {
-        self.listener.incoming()
-        .map_err(|e| panic!(e))
-        .take(conns)
-        .for_each(|sock| {
-            let (reader, writer) = sock.split();
-            let reader = BufReader::new(reader);
-            tokio::spawn(
-                tio::read_until(reader, b'\n', Vec::new())
-                .and_then(move |(_reader, buf)| {
-                    let response = if buf.starts_with(b"IDN?") {
-                        &b"DummyEmulator\r\n"[..]
-                    } else {
-                        &b"Error\r\n"[..]
-                    };
-                    tio::write_all(writer, response)
-                    .map(|_writer| {
-                        //(reader, writer)
-                        ()
-                    })
-                })
-                .map_err(|e| panic!(e))
-            )
-        })
+    pub async fn run(&mut self, conns: u64) {
+        for _ in 0..conns {
+            let (mut conn, _): (TcpStream, _) = self.listener.accept().await.unwrap();
+            let (reader, mut writer) = conn.split();
+            let mut reader = BufReader::new(reader);
+            let mut command = vec![];
+            reader.read_until(b'\n', &mut command).await.unwrap();
+
+            let response = if command.starts_with(b"IDN?") {
+                b"DummyEmulator".to_vec()
+            } else {
+                b"Error".to_vec()
+            };
+
+            writer.write_all(&response).await.unwrap();
+            writer.write_all(b"\r\n").await.unwrap();
+        }
     }
 }

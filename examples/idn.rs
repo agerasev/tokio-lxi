@@ -1,17 +1,14 @@
-extern crate tokio;
-extern crate tokio_lxi;
+use tokio;
 
-use tokio::prelude::*;
 use tokio_lxi::LxiDevice;
 
-
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), tokio_lxi::Error> {
     let addr = "10.0.0.9:5025".parse().unwrap();
-    let device = LxiDevice::connect(&addr)
-    .and_then(|dev| dev.send(String::from("*IDN?")))
-    .and_then(|(dev, _)| dev.receive(String::new()))
-    .map(|(_, text)| println!("{}", text))
-    .map_err(|e| panic!("{:?}", e));
+    let mut device = LxiDevice::connect(&addr).await?;
+    device.send("*IDN?").await?;
+    let reply = device.receive().await?;
+    println!("{}", reply);
 
-    tokio::run(device);
+    Ok(())
 }
