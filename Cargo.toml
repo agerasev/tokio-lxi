@@ -6,8 +6,8 @@ edition = "2018"
 
 description = "LXI protocol abstractions for Tokio"
 documentation = "https://docs.rs/tokio-lxi"
-homepage = "https://github.com/nthend/tokio-lxi"
-repository = "https://github.com/nthend/tokio-lxi.git"
+homepage = "https://github.com/agerasev/tokio-lxi"
+repository = "https://github.com/agerasev/tokio-lxi.git"
 readme = "README.md"
 keywords = ["lxi", "scpi", "tokio", "futures"]
 categories = ["asynchronous", "network-programming"]

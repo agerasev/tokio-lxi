@@ -9,38 +9,36 @@
 
 [crates_badge]: https://img.shields.io/crates/v/tokio-lxi.svg
 [docs_badge]: https://docs.rs/tokio-lxi/badge.svg
-[travis_badge]: https://api.travis-ci.org/nthend/tokio-lxi.svg
-[appveyor_badge]: https://ci.appveyor.com/api/projects/status/github/nthend/tokio-lxi?branch=master&svg=true
-[codecov_badge]: https://codecov.io/gh/nthend/tokio-lxi/graphs/badge.svg
+[travis_badge]: https://api.travis-ci.org/agerasev/tokio-lxi.svg
+[appveyor_badge]: https://ci.appveyor.com/api/projects/status/github/agerasev/tokio-lxi?branch=master&svg=true
+[codecov_badge]: https://codecov.io/gh/agerasev/tokio-lxi/graphs/badge.svg
 [license_badge]: https://img.shields.io/crates/l/tokio-lxi.svg
 
 [crates]: https://crates.io/crates/tokio-lxi
 [docs]: https://docs.rs/tokio-lxi
-[travis]: https://travis-ci.org/nthend/tokio-lxi
-[appveyor]: https://ci.appveyor.com/project/nthend/tokio-lxi
-[codecov]: https://codecov.io/gh/nthend/tokio-lxi
+[travis]: https://travis-ci.org/agerasev/tokio-lxi
+[appveyor]: https://ci.appveyor.com/project/agerasev/tokio-lxi
+[codecov]: https://codecov.io/gh/agerasev/tokio-lxi
 [license]: #license
 
-LXI protocol abstractions for Tokio.
+LXI protocol abstractions for Tokio with `async`/`.await` support.
 
 ## Example
 
 ```rust
-extern crate tokio;
-extern crate tokio_lxi;
+use tokio;
 
-use tokio::prelude::*;
 use tokio_lxi::LxiDevice;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), tokio_lxi::Error> {
     let addr = "10.0.0.9:5025".parse().unwrap();
-    let device = LxiDevice::connect(&addr)
-    .and_then(|dev| dev.send(String::from("*IDN?")))
-    .and_then(|(dev, _)| dev.receive(String::new()))
-    .map(|(_, text)| println!("{}", text))
-    .map_err(|e| panic!("{:?}", e));
+    let mut device = LxiDevice::connect(&addr).await?;
+    device.send("*IDN?").await?;
+    let reply = device.receive().await?;
+    println!("{}", reply);
 
-    tokio::run(device);
+    Ok(())
 }
 ```
 
