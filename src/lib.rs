@@ -1,20 +1,22 @@
 #[cfg(test)]
 mod dummy;
+mod runtime;
 
+use runtime::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter, TcpStream};
+use std::future::Future;
 use std::net::SocketAddr;
-
-use tokio;
-use tokio::io::BufStream;
-use tokio::net::TcpStream;
-use tokio::prelude::*;
+use std::pin::Pin;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    IO(#[from] tokio::io::Error),
+    IO(#[from] runtime::Error),
 
     #[error("Invalid response data (lossy decoding from UTF-8): {0}")]
     ResponseDataInvalid(String),
+
+    #[error(transparent)]
+    UserCallbackError(#[from] anyhow::Error),
 }
 
 fn remove_newline(text: &mut String) {
@@ -30,14 +32,26 @@ fn remove_newline(text: &mut String) {
 }
 
 pub struct LxiDevice {
-    stream: BufStream<TcpStream>,
+    stream: Pin<Box<BufReader<BufWriter<TcpStream>>>>,
 }
 
 impl LxiDevice {
     pub async fn connect(addr: &SocketAddr) -> Result<Self, Error> {
-        let stream: BufStream<TcpStream> =
-            BufStream::with_capacity(1024, 128, TcpStream::connect(&addr).await?);
-        Ok(Self { stream })
+        Self::connect_with_buffer_capacity(addr, 1024, 128).await
+    }
+
+    pub async fn connect_with_buffer_capacity(
+        addr: &SocketAddr,
+        read_buffer_size: usize,
+        write_buffer_size: usize,
+    ) -> Result<Self, Error> {
+        let stream = BufReader::with_capacity(
+            read_buffer_size,
+            BufWriter::with_capacity(write_buffer_size, TcpStream::connect(&addr).await?),
+        );
+        Ok(Self {
+            stream: Box::pin(stream),
+        })
     }
 
     async fn write<T: AsRef<[u8]>>(&mut self, buf: T) -> Result<(), Error> {
@@ -45,8 +59,8 @@ impl LxiDevice {
         Ok(())
     }
 
-    pub async fn send(&mut self, text: &str) -> Result<(), Error> {
-        self.write(text).await?;
+    pub async fn send(&mut self, req: &str) -> Result<(), Error> {
+        self.write(req).await?;
         self.stream.write_all(b"\r\n").await?;
         self.stream.flush().await?;
         Ok(())
@@ -63,18 +77,38 @@ impl LxiDevice {
 
         Ok(response)
     }
+
+    pub async fn receive_data<'a, T, F, P>(&'a mut self, parser: P) -> Result<T, Error>
+    where
+        F: Future<Output = Result<T, Error>> + Send,
+        P: FnOnce(Pin<&'a mut (dyn AsyncBufRead + Send)>) -> F,
+    {
+        let stream = self.stream.as_mut();
+        Ok(parser(stream).await?)
+    }
+
+    pub async fn request(&mut self, req: &str) -> Result<String, Error> {
+        self.send(req).await?;
+        self.receive().await
+    }
+
+    pub async fn request_data<'a, T, F, P>(&'a mut self, req: &str, parser: P) -> Result<T, Error>
+    where
+        F: Future<Output = Result<T, Error>> + Send,
+        P: FnOnce(Pin<&'a mut (dyn AsyncBufRead + Send)>) -> F,
+    {
+        self.send(req).await?;
+        self.receive_data(parser).await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use std::net::{IpAddr, Ipv4Addr};
-
-    use tokio::io::BufReader;
-    use tokio::net::TcpListener;
-
     use dummy::DummyEmulator;
+    use runtime::{AsyncReadExt, BufReader, TcpListener};
+    use std::net::{IpAddr, Ipv4Addr};
 
     pub static LOCALHOST: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 
