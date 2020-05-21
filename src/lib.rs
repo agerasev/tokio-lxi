@@ -103,6 +103,7 @@ impl LxiDevice {
 }
 
 #[cfg(test)]
+#[cfg(feature = "runtime-tokio")]
 mod tests {
     use super::*;
 
