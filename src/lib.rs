@@ -7,6 +7,8 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 
+const DEFAULT_EOL: &[u8] = b"\r\n";
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
@@ -33,6 +35,7 @@ fn remove_newline(text: &mut String) {
 
 pub struct LxiDevice {
     stream: Pin<Box<BufReader<BufWriter<TcpStream>>>>,
+    eol: Vec<u8>,
 }
 
 impl LxiDevice {
@@ -51,7 +54,12 @@ impl LxiDevice {
         );
         Ok(Self {
             stream: Box::pin(stream),
+            eol: DEFAULT_EOL.to_vec(),
         })
+    }
+
+    pub fn set_eol(&mut self, eol: &[u8]) {
+        self.eol = eol.to_vec();
     }
 
     async fn write<T: AsRef<[u8]>>(&mut self, buf: T) -> Result<(), Error> {
@@ -61,7 +69,7 @@ impl LxiDevice {
 
     pub async fn send(&mut self, req: &str) -> Result<(), Error> {
         self.write(req).await?;
-        self.stream.write_all(b"\r\n").await?;
+        self.stream.write_all(&self.eol).await?;
         self.stream.flush().await?;
         Ok(())
     }
@@ -115,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn client_server() {
-        let mut server: TcpListener = TcpListener::bind(&SocketAddr::new(LOCALHOST, 0))
+        let server: TcpListener = TcpListener::bind(&SocketAddr::new(LOCALHOST, 0))
             .await
             .unwrap();
         let address = server.local_addr().unwrap();
