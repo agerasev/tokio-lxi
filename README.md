@@ -2,21 +2,21 @@
 
 [![Crates.io][crates_badge]][crates]
 [![Docs.rs][docs_badge]][docs]
-[![Travis CI][travis_badge]][travis]
+[![Github Actions][github_badge]][github]
 [![Appveyor][appveyor_badge]][appveyor]
 [![Codecov.io][codecov_badge]][codecov]
 [![License][license_badge]][license]
 
 [crates_badge]: https://img.shields.io/crates/v/tokio-lxi.svg
 [docs_badge]: https://docs.rs/tokio-lxi/badge.svg
-[travis_badge]: https://api.travis-ci.org/agerasev/tokio-lxi.svg
+[github_badge]: https://github.com/agerasev/tokio-lxi/actions/workflows/test.yml/badge.svg
 [appveyor_badge]: https://ci.appveyor.com/api/projects/status/github/agerasev/tokio-lxi?branch=master&svg=true
 [codecov_badge]: https://codecov.io/gh/agerasev/tokio-lxi/graphs/badge.svg
 [license_badge]: https://img.shields.io/crates/l/tokio-lxi.svg
 
 [crates]: https://crates.io/crates/tokio-lxi
 [docs]: https://docs.rs/tokio-lxi
-[travis]: https://travis-ci.org/agerasev/tokio-lxi
+[github]: https://github.com/agerasev/tokio-lxi/actions/workflows/test.yml
 [appveyor]: https://ci.appveyor.com/project/agerasev/tokio-lxi
 [codecov]: https://codecov.io/gh/agerasev/tokio-lxi
 [license]: #license
