@@ -1,9 +1,8 @@
 use std::net::{IpAddr, SocketAddr};
 
 use tokio::io as tio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::prelude::*;
 
 pub struct DummyEmulator {
     listener: TcpListener,

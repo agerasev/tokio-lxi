@@ -123,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn client_server() {
-        let mut server: TcpListener = TcpListener::bind(&SocketAddr::new(LOCALHOST, 0))
+        let server: TcpListener = TcpListener::bind(&SocketAddr::new(LOCALHOST, 0))
             .await
             .unwrap();
         let address = server.local_addr().unwrap();
